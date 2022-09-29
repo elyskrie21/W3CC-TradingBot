@@ -1,17 +1,12 @@
-x = "Nancy"
-print(x)
+import requests
 
-# Combine numbers and text
-s = "My lucky number is %d, what is yours?" % 7
-print(s)
 
-# alternative method of combining numbers and text
-s = "My lucky number is " + str(7) + ", what is yours?"
-print(s)
+resp = requests.get('https://api.binance.us/api/v3/ticker/price?symbol=ETHUSD')
 
-# print character by index
-print(x[0])
+print(resp.json())
 
-# print piece of string
-print(x[0:3])
 
+
+
+
+  

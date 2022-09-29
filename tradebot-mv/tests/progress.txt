@@ -1,0 +1,8 @@
+David: so far i figured out the basics of python and have created an api key with binance-us. I have an account already set up with them so i can do some testing with that account. I still need to figure out how to use their api so i will create some tests in the __init__.py module.
+#https://docs.binance.us/?python#trade-order-endpoints
+run this to test their api connection:
+'python3 __init__.py'
+9/29/2022
+
+
+
