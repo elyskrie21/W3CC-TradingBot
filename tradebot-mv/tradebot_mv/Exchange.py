@@ -2,18 +2,11 @@
 # Main reason is that their is a better way to implment a general Exchange class that would be better
 # If we want to be super perfomant, we would stick to ONE exchange and write custom requests for it. 
 import ccxt
+from ExchangeConnector import ExchangeConnector
 
-class Exchange:
+class Exchange(ExchangeConnector):
     def __init__(self, exchange: ccxt.Exchange, setSandbox: bool = False) -> None:
-        self.exchange = getattr(ccxt, exchange)({
-            'apiKey': '',
-            'secret': ''
-        })
-        self.exchange.loadMarkets()
-        if (setSandbox):
-            self.exchange.setSandboxMode()
-
-        print(self.exchange.has)
+        super().__init__(exchange, setSandbox)
 
     @property 
     def free_balance(self):
