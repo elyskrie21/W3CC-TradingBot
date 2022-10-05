@@ -4,6 +4,11 @@
 import ccxt
 from ExchangeConnector import ExchangeConnector
 
+# This classes is all about the private side of each exchange
+# Here is where account information will be fetch 
+# Also any buy/sell calls will be controlled by this class
+
+# Feel free to add any other functions that is needed to handle account data or private api calls. 
 class Exchange(ExchangeConnector):
     def __init__(self, exchange: ccxt.Exchange, setSandbox: bool = False) -> None:
         super().__init__(exchange, setSandbox)
