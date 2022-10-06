@@ -29,7 +29,7 @@ class Exchange(ExchangeConnector):
             pass
     
     def getAccountBalance(self, params: dict = {}):
-        return self.exchange.fetchBalanc(params)
+        return self.exchange.fetchBalance(params)
     
     def buy(self, symbol: str, type: str, amount: float, price: float, params: dict = {}):
         return self.exchange.createOrder(symbol, type, "buy", amount, price, params)

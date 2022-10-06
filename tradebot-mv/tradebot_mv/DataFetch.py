@@ -19,5 +19,11 @@ class DataFetch(ExchangeConnector):
     async def fetchOHLCV(self, symbol: str, timeFrame = str, since = None, limit = None):
         return self.exchange.fetchOHLCV(symbol, timeFrame, limit=limit, since=since)
     
+    async def fetchTickers(self, symbol: str):
+        return self.exchange.fetchTicker(symbol) 
+    
+    async def fetchOrder(self, symbol: str):
+        return self.exchange.fetchOrder(symbol)
+    
     
     
