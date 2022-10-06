@@ -69,11 +69,14 @@ class ElyseAlgo():
     
     async def loopJob(self):
         for order in self.order_list:
-            order_info = await self.sendRequest("get_order",order.id)
-            side = order_info["side"]
-            if order_info["status"] == "closed":
+            order_info = await self.sendRequest("get_order",order.id, self.symbol)
+            side = order_info["side"].lower()
+            status = order_info["status"].lower()
+    
+            if  status == "filled":
+                print(status)
                 new_order_price = 0.0
-                old_order_id = order_info["id"]
+                old_order_id = order_info["orderId"]
                 bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
                 msg = side + " order id : " + str(old_order_id)+" : " + str(order_info["price"]) + " completed , put "
                 if side == "buy" :
@@ -98,7 +101,7 @@ class ElyseAlgo():
                     return ticker["bid"],  ticker["ask"]
 
                 elif task == "get_order":
-                    return (await self.fetcher.fetchOrder(input1))["info"]
+                    return (await self.fetcher.fetchOrder(input1, input2))["info"]
 
                 elif task == "place_order":
                     #sendRequest(self,task,input1=side,input2=price)

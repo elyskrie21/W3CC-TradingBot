@@ -22,8 +22,8 @@ class DataFetch(ExchangeConnector):
     async def fetchTickers(self, symbol: str):
         return self.exchange.fetchTicker(symbol) 
     
-    async def fetchOrder(self, symbol: str):
-        return self.exchange.fetchOrder(symbol)
+    async def fetchOrder(self, id, symbol: str):
+        return self.exchange.fetchOrder(id, symbol)
     
     
     

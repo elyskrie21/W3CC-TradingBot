@@ -1,3 +1,4 @@
+from pickle import TRUE
 import time
 import datetime
 from TradeAlgorithm import ElyseAlgo
