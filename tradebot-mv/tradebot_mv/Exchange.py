@@ -3,6 +3,7 @@
 # If we want to be super perfomant, we would stick to ONE exchange and write custom requests for it. 
 import ccxt
 from ExchangeConnector import ExchangeConnector
+import asyncio
 
 # This classes is all about the private side of each exchange
 # Here is where account information will be fetch 
@@ -14,27 +15,27 @@ class Exchange(ExchangeConnector):
         super().__init__(exchange, setSandbox)
 
     @property 
-    def free_balance(self):
+    async def free_balance(self):
         balance = self.exchange.fetch_free_balance()
 
         return {k: v for k, v in balance.items() if v > 0}
     
-    def fetchOpenOrders(self, symbol: str = None):
+    async def fetchOpenOrders(self, symbol: str = None):
         return self.exchange.fetchOpenOrders()
     
-    def cancelOrder(self, orderId: int):
+    async def cancelOrder(self, orderId: int, symbol: str):
         try: 
-            self.exchange.cancelOrder(orderId)
+            self.exchange.cancelOrder(orderId, symbol)
         except ccxt.OrderNotFound:
             pass
     
-    def getAccountBalance(self, params: dict = {}):
+    async def getAccountBalance(self, params: dict = {}):
         return self.exchange.fetchBalance(params)
     
-    def buy(self, symbol: str, type: str, amount: float, price: float, params: dict = {}):
+    async def buy(self, symbol: str, type: str, amount: float, price: float, params: dict = {}):
         return self.exchange.createOrder(symbol, type, "buy", amount, price, params)
 
-    def sell(self, symbol: str, type: str, amount: float, price: float, params: dict = {}):
+    async def sell(self, symbol: str, type: str, amount: float, price: float, params: dict = {}):
         return self.exchange.createOrder(symbol, type, "sell", amount, price, params)
     
 

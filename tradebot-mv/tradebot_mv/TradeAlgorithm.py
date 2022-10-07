@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from DataFetch import DataFetch
 from Exchange import Exchange
+from matplotlib import pyplot as plt
 import time
 import datetime
 
@@ -30,6 +31,7 @@ class Order_Info:
 class ElyseAlgo():
 
     order_list=[]
+    balanceData = []
 
     def __init__(self, exchange, symbol, logFile, gridLevel = 0.0, lowerPrice= 0.0, upperPrice= 0.0, amount=0, setSandbox = False) -> None:
         self.symbol = symbol;
@@ -53,6 +55,14 @@ class ElyseAlgo():
         except:
             pass
     
+    async def performanceGrapH(self, symbol: str):
+        accountBalance = await self.sendRequest("get_balance", symbol)
+        self.balanceData.append(accountBalance)
+       
+        plt.plot(np.array(self.balanceData))
+        plt.draw()
+        plt.pause(0.01)
+
     async def placeOrderInit(self):
         #start cal level and place grid oreder
         for i in range(self.gridLevel + 1): #  n+1 lines make n grid
@@ -68,13 +78,14 @@ class ElyseAlgo():
             self.order_list.append(order)
     
     async def loopJob(self):
+        await self.performanceGrapH("USDT")
+
         for order in self.order_list:
             order_info = await self.sendRequest("get_order",order.id, self.symbol)
             side = order_info["side"].lower()
             status = order_info["status"].lower()
     
             if  status == "filled":
-                print(status)
                 new_order_price = 0.0
                 old_order_id = order_info["orderId"]
                 bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
@@ -109,10 +120,13 @@ class ElyseAlgo():
                     price = input2
                     orderid=0
                     if side =="buy":
-                        orderid = self.exchange.buy(self.symbol, "limit", self.amount, price)["info"]["orderId"]
+                        orderid = (await self.exchange.buy(self.symbol, "limit", self.amount, price))["info"]["orderId"]
                     else:
-                        orderid = self.exchange.sell(self.symbol, "limit", self.amount, price)["info"]["orderId"]
+                        orderid = (await self.exchange.sell(self.symbol, "limit", self.amount, price))["info"]["orderId"]
                     return orderid
+                
+                elif task == "get_balance":
+                    return (await self.exchange.getAccountBalance())["total"][input1]
 
                 else:
                     return None
