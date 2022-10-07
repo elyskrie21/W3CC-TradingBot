@@ -36,7 +36,7 @@ class ElyseAlgo():
     balanceData = np.array([])
     tradeCount = 0; 
     tradeCountData = np.array([])
-    orderProfitData = np.array([])
+    orderProfitData = np.array([0])
 
 
     def __init__(self, exchange, symbol, logFile, gridLevel = 0.0, lowerPrice= 0.0, upperPrice= 0.0, amount=0, setSandbox = False) -> None:
@@ -81,7 +81,6 @@ class ElyseAlgo():
         plt.ylabel("Acount Balance (" + symbol + ")")
 
         plt.subplot(2,1,2)
-        plt.ylim(-(self.upperPrice - self.lowerPrice), (self.upperPrice - self.lowerPrice))
         plt.bar(x=self.tradeCountData, height=self.orderProfitData, color=[('green' if p > 0 else 'red') for p in self.orderProfitData])
         plt.title("Profit of Filled Orders")
         plt.xlabel("Filled Orders")
@@ -91,15 +90,17 @@ class ElyseAlgo():
         by_label = dict(zip(labels, handles))
         plt.legend(by_label.values(), by_label.keys())  
 
+        plt.rcParams['figure.figsize'] = [10, 7]
         plt.subplots_adjust(bottom=0.1,  
                     top=0.9,  
-                    wspace=0.4,  
-                    hspace=0.4)
+                    wspace=0.5,  
+                    hspace=0.5)        
         plt.draw()
         plt.pause(0.01)
         plt.gca().lines.clear()
 
     async def placeOrderInit(self):
+        await self.performanceGrapH("USDT", "none")
         #start cal level and place grid oreder
         for i in range(self.gridLevel + 1): #  n+1 lines make n grid
             price = self.lowerPrice + i * self.intervalProfit
@@ -132,14 +133,14 @@ class ElyseAlgo():
                 if side == "buy" :
                     self.orderProfitData = np.append(self.orderProfitData, -priceMargin)
                     
-                    await self.performanceGrapH("USDT", 3)
+                    await self.performanceGrapH("USDT", "v")
                     new_order_price = float(order_info["price"]) + self.intervalProfit 
                     order.id = await self.sendRequest("place_order","sell",new_order_price)
                     msg = msg + "sell"
 
                 else:
                     self.orderProfitData = np.append(self.orderProfitData, priceMargin)
-                    await self.performanceGrapH("USDT", 2)
+                    await self.performanceGrapH("USDT", "^")
 
                     new_order_price = float(order_info["price"]) - self.intervalProfit
                     order.id = await self.sendRequest("place_order","buy",new_order_price)
