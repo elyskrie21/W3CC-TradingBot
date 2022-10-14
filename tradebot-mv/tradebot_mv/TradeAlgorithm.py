@@ -20,7 +20,7 @@ COLOR_BLUE = "\033[1;34m"
 COLOR_WHITE = "\033[1;37m"
 
 class Order_Info:
-    priceMargin = 0
+    limitPrice = 0; 
 
     def __init__(self):
         self.done=False
@@ -37,6 +37,9 @@ class ElyseAlgo():
     tradeCount = 0; 
     tradeCountData = np.array([])
     orderProfitData = np.array([0])
+    
+    # changing default plot size
+    plt.rcParams["figure.figsize"] = (10,7)
 
 
     def __init__(self, exchange, symbol, logFile, gridLevel = 0.0, lowerPrice= 0.0, upperPrice= 0.0, amount=0, setSandbox = False) -> None:
@@ -53,7 +56,6 @@ class ElyseAlgo():
     def myLogger(self, msg):
         timestamp = datetime.datetime.now().strftime("%b %d %Y %H:%M:%S ")
         s = "[%s] %s:%s %s" % (timestamp, COLOR_WHITE, COLOR_RESET, msg)
-        print(s)
         try:
             f = open(self.logFile, "a")
             f.write(s + "\n")
@@ -63,6 +65,8 @@ class ElyseAlgo():
     
     async def performanceGrapH(self, symbol: str, tick):
         accountBalance = await self.sendRequest("get_balance", symbol)
+        bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
+
         self.tradeCount += 1   
         self.balanceData = np.append(self.balanceData, accountBalance)
         self.tradeCountData = np.append(self.tradeCountData, self.tradeCount)
@@ -72,83 +76,117 @@ class ElyseAlgo():
        
         plt.clf()
 
-        plt.subplot(2, 1, 1)
+        plt.subplot(2,2,1)
         plt.plot(self.tradeCountData, self.balanceData, color="k", label="USDT Balance", marker=tick)
-        plt.plot(self.tradeCountData, lineFit(self.tradeCountData), color="g", label="Account Balance Fit")
+        plt.plot(self.tradeCountData, lineFit(self.tradeCountData), color="b", label="Account Balance Fit")
 
         plt.title("Account Balance Across Filled Orders")
         plt.xlabel("Filled Orders")
         plt.ylabel("Acount Balance (" + symbol + ")")
-
-        plt.subplot(2,1,2)
+        
+        plt.subplot(2,2,2) # two rows, two columns, second cell
         plt.bar(x=self.tradeCountData, height=self.orderProfitData, color=[('green' if p > 0 else 'red') for p in self.orderProfitData])
         plt.title("Profit of Filled Orders")
         plt.xlabel("Filled Orders")
         plt.ylabel("Profit (" + symbol + ")")
 
-        handles, labels = plt.gca().get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        plt.legend(by_label.values(), by_label.keys())  
-
-        plt.rcParams['figure.figsize'] = [10, 7]
+        plt.subplot(2,2,(3,4)) # two rows, two colums, combined third and fourth cell
+        orderGridX = np.arange(len(self.order_list))
+        orderGridY = np.array([x.limitPrice for x in self.order_list])
+        plt.title("Visual Order Grid")
+        plt.xlabel("Grid Level")
+        plt.ylabel("Grid Level Price")
+        
+        plt.axhline(y=self.upperPrice, color="b", linestyle="dotted")
+        plt.axhline(y=self.lowerPrice, color="k", linestyle="dotted")
+        plt.axhline(y=ask_price, color="m", linestyle="dotted")
+        plt.scatter(orderGridX, orderGridY, color=[('green' if p.side == "sell" else 'red') for p in self.order_list])
+        plt.grid(True)
+      
         plt.subplots_adjust(bottom=0.1,  
                     top=0.9,  
                     wspace=0.5,  
                     hspace=0.5)        
         plt.draw()
         plt.pause(0.01)
+
         plt.gca().lines.clear()
 
-    async def placeOrderInit(self):
-        await self.performanceGrapH("USDT", "none")
-        #start cal level and place grid oreder
+
+    async def placeOrderInit(self): 
+         #start cal level and place grid oreder
         for i in range(self.gridLevel + 1): #  n+1 lines make n grid
             price = self.lowerPrice + i * self.intervalProfit
             bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
             order = Order_Info()
-            order.priceMargin = abs(ask_price - price);
+            order.limitPrice = price;
 
             if  price < ask_price : 
                 order.id = await self.sendRequest("place_order","buy",price)
+                order.side = "buy"
                 self.myLogger("place buy order id = " + str(order.id) + " in "+ str(price))
             else:
                 order.id = await self.sendRequest("place_order","sell",price)
+                order.side = "sell"
                 self.myLogger("place sell order id = " + str(order.id) + " in "+ str(price))
             
             self.order_list.append(order)
+        
+        await self.performanceGrapH("USDT", "none")
+
     
     async def loopJob(self):
-        for order in self.order_list:
-            order_info = await self.sendRequest("get_order",order.id, self.symbol)
-            priceMargin = order.priceMargin
-            side = order_info["side"].lower()
-            status = order_info["status"].lower()
-    
-            if  status == "filled":                
-                new_order_price = 0.0
-                old_order_id = order_info["orderId"]
-                bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
-                msg = side + " order id : " + str(old_order_id)+" : " + str(order_info["price"]) + " completed , put "
-              
-                if side == "buy" :
-                    self.orderProfitData = np.append(self.orderProfitData, -priceMargin)
+        bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
+        enterMarket = False
+
+        if (enterMarket):
+            self.enterMarket()
+
+        else:
+
+            if (ask_price > (self.upperPrice + self.intervalProfit * 2)): 
+                self.takeProfit()
+                enterMarket = True
+
+            elif (ask_price < (self.lowerPrice - self.intervalProfit * 2)):
+                self.stopLoss()
+                enterMarket = True
+
+            else: 
+                for order in self.order_list:
+                    order_info = await self.sendRequest("get_order",order.id, self.symbol)
+                    side = order_info["side"].lower()
+                    status = order_info["status"].lower()
+            
+                    if  status == "filled":                
+                        new_order_price = 0.0
+                        old_order_id = order_info["orderId"]
+                        bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
+
+                        msg = side + " order id : " + str(old_order_id)+" : " + str(order_info["price"]) + " completed , put "
                     
-                    await self.performanceGrapH("USDT", "v")
-                    new_order_price = float(order_info["price"]) + self.intervalProfit 
-                    order.id = await self.sendRequest("place_order","sell",new_order_price)
-                    msg = msg + "sell"
+                        if side == "buy" :
+                            self.orderProfitData = np.append(self.orderProfitData, -self.intervalProfit)
+                            
+                            await self.performanceGrapH("USDT", "v")
+                            new_order_price = float(order_info["price"]) + self.intervalProfit 
+                            order.limitPrice = new_order_price
+                            order.id = await self.sendRequest("place_order","sell",new_order_price)
+                            order.side = "sell"
+                            msg = msg + "sell"
 
-                else:
-                    self.orderProfitData = np.append(self.orderProfitData, priceMargin)
-                    await self.performanceGrapH("USDT", "^")
+                        else:
+                            self.orderProfitData = np.append(self.orderProfitData, self.intervalProfit)
+                        
+                            await self.performanceGrapH("USDT", "^")
+                            new_order_price = float(order_info["price"]) - self.intervalProfit
+                            order.limitPrice = new_order_price
+                            order.id = await self.sendRequest("place_order","buy",new_order_price)
+                            order.side = "buy"
+                            msg = msg + "buy"
 
-                    new_order_price = float(order_info["price"]) - self.intervalProfit
-                    order.id = await self.sendRequest("place_order","buy",new_order_price)
-                    msg = msg + "buy"
-                msg = msg + " order id : " + str(order.id) + " : " + str(new_order_price)
-
-                order.priceMargin = self.intervalProfit;
-                self.myLogger(msg)
+                        msg = msg + " order id : " + str(order.id) + " : " + str(new_order_price)
+                        self.myLogger(msg)
 
     async def sendRequest(self, task, input1=None, input2=None):
         tries = 3
@@ -196,6 +234,16 @@ class ElyseAlgo():
                     self.myLogger(str(e))
                     raise
 
+    async def stopLoss(self):
+        coinAccountBalance = await self.sendRequest("get_balance", self.symbol.split("/")[0])
+        print(coinAccountBalance)
+
+    async def takeProfit(self):
+        print("Taking profit!")
+        self.myLogger("taking profit!")
+
+    async def enterMarket(self):
+        pass 
 
 # Example base class for other algorithms
 class OtherAlgo() :
