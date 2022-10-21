@@ -63,54 +63,63 @@ class ElyseAlgo():
         except:
             pass
     
-    async def performanceGrapH(self, symbol: str, tick):
-        accountBalance = await self.sendRequest("get_balance", symbol)
-        bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
+    async def performanceGrapH(self, symbol: str):
+        print(self.tradeCountData.size)
+        print(self.balanceData.size)
+        while True:
+            # checking each loop
+            print("Loop in :", datetime.datetime.now())
 
-        self.tradeCount += 1   
-        self.balanceData = np.append(self.balanceData, accountBalance)
-        self.tradeCountData = np.append(self.tradeCountData, self.tradeCount)
+            # updating info for grid
+            await self.updateGrid()
+
+            bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
+
+            lineFit = np.poly1d(np.polyfit(self.tradeCountData, self.balanceData, 1))
         
+            plt.clf()
 
-        lineFit = np.poly1d(np.polyfit(self.tradeCountData, self.balanceData, 1))
-       
-        plt.clf()
+            plt.subplot(2,2,1)
+            plt.plot(self.tradeCountData, self.balanceData, color="k", label="USDT Balance")
+            plt.plot(self.tradeCountData, lineFit(self.tradeCountData), color="b", label="Account Balance Fit")
 
-        plt.subplot(2,2,1)
-        plt.plot(self.tradeCountData, self.balanceData, color="k", label="USDT Balance", marker=tick)
-        plt.plot(self.tradeCountData, lineFit(self.tradeCountData), color="b", label="Account Balance Fit")
+            plt.title("Account Balance Across Filled Orders")
+            plt.xlabel("Filled Orders")
+            plt.ylabel("Acount Balance (" + symbol + ")")
+            
+            plt.subplot(2,2,2) # two rows, two columns, second cell
+            plt.bar(x=self.tradeCountData, height=self.orderProfitData, color=[('green' if p > 0 else 'red') for p in self.orderProfitData])
+            plt.title("Profit of Filled Orders")
+            plt.xlabel("Filled Orders")
+            plt.ylabel("Profit (" + symbol + ")")
 
-        plt.title("Account Balance Across Filled Orders")
-        plt.xlabel("Filled Orders")
-        plt.ylabel("Acount Balance (" + symbol + ")")
+            plt.subplot(2,2,(3,4)) # two rows, two colums, combined third and fourth cell
+            orderGridX = np.arange(len(self.order_list))
+            orderGridY = np.array([x.limitPrice for x in self.order_list])
+            plt.title("Visual Order Grid")
+            plt.xlabel("Grid Level")
+            plt.ylabel("Grid Level Price")
+            
+            plt.axhline(y=self.upperPrice, color="b", linestyle="dotted")
+            plt.axhline(y=self.lowerPrice, color="k", linestyle="dotted")
+            plt.axhline(y=ask_price, color="m", linestyle="dotted")
+            plt.scatter(orderGridX, orderGridY, color=[('green' if p.side == "sell" else 'red') for p in self.order_list])
         
-        plt.subplot(2,2,2) # two rows, two columns, second cell
-        plt.bar(x=self.tradeCountData, height=self.orderProfitData, color=[('green' if p > 0 else 'red') for p in self.orderProfitData])
-        plt.title("Profit of Filled Orders")
-        plt.xlabel("Filled Orders")
-        plt.ylabel("Profit (" + symbol + ")")
-
-        plt.subplot(2,2,(3,4)) # two rows, two colums, combined third and fourth cell
-        orderGridX = np.arange(len(self.order_list))
-        orderGridY = np.array([x.limitPrice for x in self.order_list])
-        plt.title("Visual Order Grid")
-        plt.xlabel("Grid Level")
-        plt.ylabel("Grid Level Price")
+            majorTicks = np.arange(self.lowerPrice, self.upperPrice + 1, self.intervalProfit * 5);
+            minorTicks = np.arange(self.lowerPrice, self.upperPrice + 1, self.intervalProfit)
+            plt.yticks(majorTicks)
+            plt.yticks(minorTicks, minor=True)
+            plt.grid(True)
         
-        plt.axhline(y=self.upperPrice, color="b", linestyle="dotted")
-        plt.axhline(y=self.lowerPrice, color="k", linestyle="dotted")
-        plt.axhline(y=ask_price, color="m", linestyle="dotted")
-        plt.scatter(orderGridX, orderGridY, color=[('green' if p.side == "sell" else 'red') for p in self.order_list])
-        plt.grid(True)
-      
-        plt.subplots_adjust(bottom=0.1,  
-                    top=0.9,  
-                    wspace=0.5,  
-                    hspace=0.5)        
-        plt.draw()
-        plt.pause(0.01)
+            plt.subplots_adjust(bottom=0.1,  
+                        top=0.9,  
+                        wspace=0.5,  
+                        hspace=0.5)        
+            plt.draw()
+            plt.pause(0.01)
 
-        plt.gca().lines.clear()
+            plt.gca().lines.clear()
+            time.sleep(1)
 
 
     async def placeOrderInit(self): 
@@ -132,10 +141,9 @@ class ElyseAlgo():
             
             self.order_list.append(order)
         
-        await self.performanceGrapH("USDT", "none")
-
-    
-    async def loopJob(self):
+        await self.updateTradeCount()
+        
+    async def updateGrid(self):
         bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
         enterMarket = False
 
@@ -158,7 +166,8 @@ class ElyseAlgo():
                     side = order_info["side"].lower()
                     status = order_info["status"].lower()
             
-                    if  status == "filled":                
+                    if  status == "filled":   
+                        await self.updateTradeCount()             
                         new_order_price = 0.0
                         old_order_id = order_info["orderId"]
                         bid_price, ask_price = await self.sendRequest("get_bid_ask_price")
@@ -168,7 +177,6 @@ class ElyseAlgo():
                         if side == "buy" :
                             self.orderProfitData = np.append(self.orderProfitData, -self.intervalProfit)
                             
-                            await self.performanceGrapH("USDT", "v")
                             new_order_price = float(order_info["price"]) + self.intervalProfit 
                             order.limitPrice = new_order_price
                             order.id = await self.sendRequest("place_order","sell",new_order_price)
@@ -178,7 +186,6 @@ class ElyseAlgo():
                         else:
                             self.orderProfitData = np.append(self.orderProfitData, self.intervalProfit)
                         
-                            await self.performanceGrapH("USDT", "^")
                             new_order_price = float(order_info["price"]) - self.intervalProfit
                             order.limitPrice = new_order_price
                             order.id = await self.sendRequest("place_order","buy",new_order_price)
@@ -236,7 +243,27 @@ class ElyseAlgo():
 
     async def stopLoss(self):
         coinAccountBalance = await self.sendRequest("get_balance", self.symbol.split("/")[0])
-        print(coinAccountBalance)
+        stopLossOrderID = self.sendRequest("place_order", "sell", coinAccountBalance); 
+
+        status = ""
+
+        while(status != "filled"):
+            self.myLogger("Waiting for StopLossOrder: " + stopLossOrderID + ", to be completed")
+            order_info = await self.sendRequest("get_order",stopLossOrderID.id, self.symbol)
+            status = order_info["status"].lower()
+
+            time.sleep(5)
+
+        self.myLogger("StopLossorder: " + stopLossOrderID + ", has been completed")
+        
+
+    async def updateTradeCount(self):
+        accountBalance = await self.sendRequest("get_balance", "USDT")
+        self.balanceData = np.append(self.balanceData, accountBalance)            
+
+
+        self.tradeCount += 1   
+        self.tradeCountData = np.append(self.tradeCountData, self.tradeCount)
 
     async def takeProfit(self):
         print("Taking profit!")

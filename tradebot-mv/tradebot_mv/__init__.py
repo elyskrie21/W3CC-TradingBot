@@ -25,12 +25,9 @@ async def ElyseBot():
     bot = ElyseAlgo("binance", config["symbol"], config["LOGFILE"], config["grid_level"],
                     config["lower_price"], config["upper_price"], config["amount"], True)
     
-    await bot.placeOrderInit();
+    await bot.placeOrderInit()
 
-    while True:
-        print("Loop in :", datetime.datetime.now())
-        await bot.loopJob()
-        time.sleep(1)
+    await bot.performanceGrapH("USDT")
 
 
 
