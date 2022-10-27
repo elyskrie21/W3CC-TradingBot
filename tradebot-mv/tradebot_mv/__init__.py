@@ -22,8 +22,8 @@ async def ElyseBot():
     with open("config.json") as configFile:
         config = json.load(configFile)
 
-    bot = ElyseAlgo("binance", config["symbol"], config["LOGFILE"], config["grid_level"],
-                    config["lower_price"], config["upper_price"], config["amount"], True)
+
+    bot = ElyseAlgo("binance", config["symbol"], config["LOGFILE"], config["grid_level"], config["amount"], True)
     
     await bot.placeOrderInit()
 
