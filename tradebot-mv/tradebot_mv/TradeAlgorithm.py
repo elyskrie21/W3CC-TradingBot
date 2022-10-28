@@ -206,6 +206,9 @@ class ElyseAlgo():
                 time.sleep(3)
 
         if (stopLossOrderID != 0):
+            #  We should cancel all open orders when 
+            await self.cancelOrders()
+
             while(status != "filled"):
                 myLogger("Waiting for " + sellType + ": " + stopLossOrderID + ", to be completed", self.logFile)
                 order_info = await self.sendRequest.req("get_order",stopLossOrderID.id, self.symbol)
@@ -227,8 +230,17 @@ class ElyseAlgo():
         self.tradeCountData = np.append(self.tradeCountData, self.tradeCount)
 
     async def enterMarket(self):
-        print("Entering market")
-        myLogger("Entering market", self.logFile) 
+        oderData = await self.sendRequest.req("fetch_order_book", 500, "asks")
+
+        data = np.array([x[0] for x in oderData])
+        
+    
+    async def cancelOrders(self):
+        for order in self.order_list:
+            order_info = await self.sendRequest.req("cancel_order",order.id, self.symbol)
+            status = order_info["status"].lower()
+
+            myLogger("Attempting to cancel order: " + order.id + ", has resulted in the status of: " + status, self.logFile)
 
 # Example base class for other algorithms
 class OtherAlgo() :

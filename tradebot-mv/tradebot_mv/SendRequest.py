@@ -24,6 +24,9 @@ class SendRequest:
 
                 elif task == "get_order":
                     return (await self.fetcher.fetchOrder(input1, input2))["info"]
+                
+                elif task == "cancel_order":
+                    return (await self.exchange.cancelOrder(input1, input2))["info"]
 
                 elif task == "place_order":
                     #sendRequest(self,task,input1=side,input2=price)
@@ -39,11 +42,13 @@ class SendRequest:
                 elif task == "get_balance":
                     return (await self.exchange.getAccountBalance())["total"][input1]
                 
+                elif task == "fetch_order_book":
+                    return (await self.fetcher.fetchOrderBook(self.symbol, limit=input1))[input2]
+                
                 elif task == "exit_market":
-                    coinAccountBalance = await self.sendRequest.req("get_balance", self.symbol.split("/")[0])
-                    bid_price, ask_price = await self.sendRequest.req("get_bid_ask_price")
+                    coinAccountBalance = (await self.exchange.getAccountBalance())["total"][self.symbol.split("/")[0]]
+                    ask_price = (await self.fetcher.fetchTickers(self.symbol))["ask"]
 
-                    orderid=0
                     orderid = (await self.exchange.sell(self.symbol, "limit", coinAccountBalance, ask_price))["info"]["orderId"]
                     
                     return orderid
