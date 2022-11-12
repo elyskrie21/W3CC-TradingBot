@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import time
 import datetime
 import ccxt
-
+from sklearn.linear_model import HuberRegressor
 # In this class we can all creat our own trading algoritms which will be tested later on
 # These classes don't fetch their own data, but rather each algo while use the DataFetch and Exchange classes
 
@@ -230,9 +230,27 @@ class ElyseAlgo():
         self.tradeCountData = np.append(self.tradeCountData, self.tradeCount)
 
     async def enterMarket(self):
-        oderData = await self.sendRequest.req("fetch_order_book", 500, "asks")
+        orders = np.array([])
 
-        data = np.array([x[0] for x in oderData])
+        for i in range(1):
+            data = await self.sendRequest.req("fetch_order_book", 500, "asks")
+            orders = np.concatenate((orders, [x[0] for x in data]))
+            time.sleep(5)
+
+        y = np.array(orders, dtype=float)
+        x = np.array(list(range(0, y.size)))
+    
+        sd = np.std(x);
+
+        A = np.vstack([x, np.ones(x.size)]).T
+        epsilon = 1.9
+        huber = HuberRegressor(alpha=0.0, epsilon=epsilon)
+        huber.fit(A, y)
+
+        print("std: ", sd)
+        print("huber: ", huber.coef_)
+        print(huber.get_params())
+
         
     
     async def cancelOrders(self):

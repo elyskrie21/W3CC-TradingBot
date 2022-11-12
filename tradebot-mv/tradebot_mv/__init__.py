@@ -24,22 +24,25 @@ async def ElyseBot():
 
 
     bot = ElyseAlgo("binance", config["symbol"], config["LOGFILE"], config["grid_level"], config["amount"], True)
-    
-    await bot.placeOrderInit()
 
-    await bot.performanceGrapH("USDT")
+    await bot.enterMarket()
+    
+    # await bot.placeOrderInit()
+
+    # await bot.performanceGrapH("USDT")
 
 
 async def testing():
     fetch = DataFetch("binance", setSandbox=True)
-    orders = np.array([])
+    data = []
 
-    for i in range(100):
-        data = await fetch.fetchOrderBook(symbol="ETH/USDT", limit=500)
-        orders = np.concatenate((orders, [x[0] for x in data['asks']]))
-        time.sleep(5)
+    for i in range(500):
+        data.append((await fetch.fetchTickers(symbol="ETH/USDT"))['ask'])
+        time.sleep(0.5)
 
-    y = np.array(np.unique(orders), dtype=float)
+    print(data)
+
+    y = np.array(data, dtype=float)
     x = np.array(list(range(0, y.size)))
     
 
@@ -67,6 +70,6 @@ async def testing():
 
 
 if (__name__ == "__main__"):
-    # asyncio.run(main())
-
     asyncio.run(testing())
+
+    # asyncio.run(testing())

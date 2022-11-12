@@ -43,7 +43,7 @@ class SendRequest:
                     return (await self.exchange.getAccountBalance())["total"][input1]
                 
                 elif task == "fetch_order_book":
-                    return (await self.fetcher.fetchOrderBook(self.symbol, limit=input1))[input2]
+                    return (await self.fetcher.fetchOrderBook(limit=input1, symbol=self.symbol))[input2]
                 
                 elif task == "exit_market":
                     coinAccountBalance = (await self.exchange.getAccountBalance())["total"][self.symbol.split("/")[0]]
