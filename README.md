@@ -6,7 +6,7 @@ Initially appeared on
 
 ## Goal
 
-To make a crypto trading bot 
+To make a crypto trading bot with a profitable algorithm
 
 ### Prerequisites
 
