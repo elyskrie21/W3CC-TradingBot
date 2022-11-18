@@ -31,7 +31,7 @@ class ElyseAlgo():
     balanceData = np.array([])
     tradeCount = 0; 
     tradeCountData = np.array([])
-    orderProfitData = np.array([0])
+    orderProfitData = [0] * 2
 
     # buy prices
     upperPrice = 0
@@ -78,7 +78,7 @@ class ElyseAlgo():
             plt.ylabel("Acount Balance (" + symbol + ")")
             
             plt.subplot(2,2,2) # two rows, two columns, second cell
-            plt.bar(x=self.tradeCountData, height=self.orderProfitData, color=[('green' if p > 0 else 'red') for p in self.orderProfitData])
+            plt.bar(x=["Sells", "Buys"], height=self.orderProfitData, color=["green", "red"])
             plt.title("Profit of Filled Orders")
             plt.xlabel("Filled Orders")
             plt.ylabel("Profit (" + symbol + ")")
@@ -115,6 +115,27 @@ class ElyseAlgo():
     async def placeOrderInit(self): 
         await self.setBuyPrice()
 
+        # Since when starting the bot there would be no coin balance 
+        # We need to buy some in order to creqte the sell orders needed
+
+        setUpId = await self.sendRequest.req("enter_market", (self.gridLevel / 2) + 1)
+        order_info = await self.sendRequest.req("get_order",setUpId, self.symbol)
+        status = order_info["status"].lower()
+        tries = 0; 
+        
+
+        while(status != "filled"):
+            myLogger("Waiting for enter_market order, to be completed", self.logFile)
+            order_info = await self.sendRequest.req("get_order",setUpId, self.symbol)
+            status = order_info["status"].lower()
+
+            if (tries == 60):
+                self.reenterMarket = True
+                return
+
+            tries += 1
+            time.sleep(1)
+
          #start cal level and place grid oreder
         for i in range(self.gridLevel + 1): #  n+1 lines make n grid
             price = self.lowerPrice + i * self.intervalProfit
@@ -139,7 +160,16 @@ class ElyseAlgo():
         bid_price, ask_price = await self.sendRequest.req("get_bid_ask_price")
 
         if (self.reenterMarket):
-            await self.enterMarket()
+            reEnter = await self.enterMarket()
+            
+            if (reEnter): 
+                self.reenterMarket = False
+                myLogger("Re-Enter Market Succeed")
+
+                await self.placeOrderInit()
+            else:
+                myLogger("Re-Enter Market Failed")
+
 
         else:
 
@@ -166,7 +196,7 @@ class ElyseAlgo():
                         msg = side + " order id : " + str(old_order_id)+" : " + str(order_info["price"]) + " completed , put "
                     
                         if side == "buy" :
-                            self.orderProfitData = np.append(self.orderProfitData, -self.intervalProfit)
+                            self.orderProfitData[1] += 1
                             
                             new_order_price = float(order_info["price"]) + self.intervalProfit 
                             order.limitPrice = new_order_price
@@ -175,8 +205,8 @@ class ElyseAlgo():
                             msg = msg + "sell"
 
                         else:
-                            self.orderProfitData = np.append(self.orderProfitData, self.intervalProfit)
-                        
+                            self.orderProfitData[0] += 1
+                                                    
                             new_order_price = float(order_info["price"]) - self.intervalProfit
                             order.limitPrice = new_order_price
                             order.id = await self.sendRequest.req("place_order","buy",new_order_price)
@@ -211,7 +241,7 @@ class ElyseAlgo():
 
             while(status != "filled"):
                 myLogger("Waiting for " + sellType + ": " + stopLossOrderID + ", to be completed", self.logFile)
-                order_info = await self.sendRequest.req("get_order",stopLossOrderID.id, self.symbol)
+                order_info = await self.sendRequest.req("get_order",stopLossOrderID, self.symbol)
                 status = order_info["status"].lower()
 
                 time.sleep(5)
@@ -230,26 +260,28 @@ class ElyseAlgo():
         self.tradeCountData = np.append(self.tradeCountData, self.tradeCount)
 
     async def enterMarket(self):
-        orders = np.array([])
+        data = []
 
-        for i in range(1):
-            data = await self.sendRequest.req("fetch_order_book", 500, "asks")
-            orders = np.concatenate((orders, [x[0] for x in data]))
-            time.sleep(5)
+        for i in range(1000):
+            bid_price, ask_price = await self.sendRequest.req("get_bid_ask_price")
+            data.append(ask_price); 
+            time.sleep(1)
 
-        y = np.array(orders, dtype=float)
+        y = np.array(data, dtype=float)
         x = np.array(list(range(0, y.size)))
-    
-        sd = np.std(x);
+
+        std = np.std(y); 
 
         A = np.vstack([x, np.ones(x.size)]).T
-        epsilon = 1.9
+        epsilon = 1.75
         huber = HuberRegressor(alpha=0.0, epsilon=epsilon)
         huber.fit(A, y)
+        huber.predict(A)
 
-        print("std: ", sd)
-        print("huber: ", huber.coef_)
-        print(huber.get_params())
+        if (huber.coef_[0] > 0 and std < 1):
+            return True
+        
+        return False
 
         
     

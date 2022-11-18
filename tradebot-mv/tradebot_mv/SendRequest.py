@@ -40,18 +40,24 @@ class SendRequest:
                     return orderid
                 
                 elif task == "get_balance":
-                    return (await self.exchange.getAccountBalance())["total"][input1]
+                    return (await self.exchange.getAccountBalance())["free"][input1]
                 
                 elif task == "fetch_order_book":
                     return (await self.fetcher.fetchOrderBook(limit=input1, symbol=self.symbol))[input2]
                 
                 elif task == "exit_market":
-                    coinAccountBalance = (await self.exchange.getAccountBalance())["total"][self.symbol.split("/")[0]]
+                    coinAccountBalance = (await self.exchange.getAccountBalance())["free"][self.symbol.split("/")[0]]
                     ask_price = (await self.fetcher.fetchTickers(self.symbol))["ask"]
 
                     orderid = (await self.exchange.sell(self.symbol, "limit", coinAccountBalance, ask_price))["info"]["orderId"]
                     
                     return orderid
+                elif task == "enter_market":
+                    ask_price = (await self.fetcher.fetchTickers(self.symbol))["ask"]
+                    orderid = (await self.exchange.buy(self.symbol, "limit", self.amount * input1, ask_price))["info"]["orderId"]
+                    
+                    return orderid
+
 
                 else:
                     return None

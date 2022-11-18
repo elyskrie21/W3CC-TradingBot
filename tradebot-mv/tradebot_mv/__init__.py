@@ -1,4 +1,5 @@
 import time
+from Exchange import Exchange
 from TradeAlgorithm import ElyseAlgo
 from DataFetch import DataFetch
 import asyncio
@@ -25,11 +26,18 @@ async def ElyseBot():
 
     bot = ElyseAlgo("binance", config["symbol"], config["LOGFILE"], config["grid_level"], config["amount"], True)
 
-    await bot.enterMarket()
-    
-    # await bot.placeOrderInit()
+    exchange = Exchange("binance", True)
 
-    # await bot.performanceGrapH("USDT")
+
+    # print(await exchange.getAccountBalance())
+    # await exchange.sell("BTC/USDT", "market", 0.05, 15000)
+    # print(await exchange.getAccountBalance())
+
+
+    await bot.exitMarket("Test")
+    await bot.placeOrderInit()
+
+    await bot.performanceGrapH("USDT")
 
 
 async def testing():
@@ -38,12 +46,13 @@ async def testing():
 
     for i in range(500):
         data.append((await fetch.fetchTickers(symbol="ETH/USDT"))['ask'])
-        time.sleep(0.5)
-
-    print(data)
+        time.sleep(0)
 
     y = np.array(data, dtype=float)
     x = np.array(list(range(0, y.size)))
+
+    std = np.std(y); 
+    print("StD: ", std)
     
 
     A = np.vstack([x, np.ones(x.size)]).T
@@ -70,6 +79,6 @@ async def testing():
 
 
 if (__name__ == "__main__"):
-    asyncio.run(testing())
+    asyncio.run(main())
 
     # asyncio.run(testing())
