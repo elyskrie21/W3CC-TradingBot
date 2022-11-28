@@ -34,7 +34,7 @@ async def ElyseBot():
     # print(await exchange.getAccountBalance())
 
 
-    await bot.exitMarket("Test")
+    # await bot.exitMarket("Test")
     await bot.placeOrderInit()
 
     await bot.performanceGrapH("USDT")

@@ -26,7 +26,11 @@ class SendRequest:
                     return (await self.fetcher.fetchOrder(input1, input2))["info"]
                 
                 elif task == "cancel_order":
-                    return (await self.exchange.cancelOrder(input1, input2))["info"]
+                    data = (await self.exchange.cancelOrder(input1, input2))
+                    if (type(data) is str):
+                        return "OrderNotFound"
+                    else:
+                        return data["info"]
 
                 elif task == "place_order":
                     #sendRequest(self,task,input1=side,input2=price)

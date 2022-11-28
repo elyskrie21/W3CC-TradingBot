@@ -25,9 +25,9 @@ class Exchange(ExchangeConnector):
     
     async def cancelOrder(self, orderId: int, symbol: str):
         try: 
-            self.exchange.cancelOrder(orderId, symbol)
+            return self.exchange.cancelOrder(orderId, symbol)
         except ccxt.OrderNotFound:
-            pass
+            return "OrderNotFound"
     
     async def getAccountBalance(self, params: dict = {}):
         return self.exchange.fetchBalance(params)

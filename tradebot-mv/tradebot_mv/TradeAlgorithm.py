@@ -51,8 +51,8 @@ class ElyseAlgo():
     
     async def setBuyPrice(self):
         bidPrice, askPrice = await self.sendRequest.req("get_bid_ask_price");
-        self.upperPrice = askPrice + 25
-        self.lowerPrice = askPrice - 25
+        self.upperPrice = askPrice + (self.gridLevel / 2);
+        self.lowerPrice = askPrice - (self.gridLevel / 2)
         self.intervalProfit = (self.upperPrice - self.lowerPrice) / self.gridLevel
     
     async def performanceGrapH(self, symbol: str):
@@ -113,6 +113,9 @@ class ElyseAlgo():
 
 
     async def placeOrderInit(self): 
+        bid_price, ask_price = await self.sendRequest.req("get_bid_ask_price")
+        myLogger("Starting account balance: " + str(ask_price), self.logFile); 
+
         await self.setBuyPrice()
 
         # Since when starting the bot there would be no coin balance 
@@ -164,11 +167,11 @@ class ElyseAlgo():
             
             if (reEnter): 
                 self.reenterMarket = False
-                myLogger("Re-Enter Market Succeed")
+                myLogger("Re-Enter Market Succeed", self.logFile)
 
                 await self.placeOrderInit()
             else:
-                myLogger("Re-Enter Market Failed")
+                myLogger("Re-Enter Market Failed", self.logFile)
 
 
         else:
@@ -278,6 +281,7 @@ class ElyseAlgo():
         huber.fit(A, y)
         huber.predict(A)
 
+        myLogger("EnterMarket Data: (Coef: " + huber.coef_[0] + "), (STD: " + std + ")", self.logFile)
         if (huber.coef_[0] > 0 and std < 1):
             return True
         
@@ -288,9 +292,11 @@ class ElyseAlgo():
     async def cancelOrders(self):
         for order in self.order_list:
             order_info = await self.sendRequest.req("cancel_order",order.id, self.symbol)
-            status = order_info["status"].lower()
-
-            myLogger("Attempting to cancel order: " + order.id + ", has resulted in the status of: " + status, self.logFile)
+            if (type(order_info) is str):
+                myLogger("Attempting to cancel order: " + order.id + ", has resulted in the status of: OrderNotFound", self.logFile)
+            else:         
+                status = order_info["status"].lower()
+                myLogger("Attempting to cancel order: " + order.id + ", has resulted in the status of: " + status, self.logFile)
 
 # Example base class for other algorithms
 class OtherAlgo() :

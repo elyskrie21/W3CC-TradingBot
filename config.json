@@ -1,7 +1,7 @@
 {
     "LOGFILE":"ftx.log",
     "symbol":"ETH/USDT", 
-    "grid_level":40,
+    "grid_level":20,
     "lower_price":1275,
     "upper_price":1325,
     "amount":0.01
