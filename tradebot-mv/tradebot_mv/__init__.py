@@ -29,15 +29,15 @@ async def ElyseBot():
     exchange = Exchange("binance", True)
 
 
-    # print(await exchange.getAccountBalance())
     # await exchange.sell("BTC/USDT", "market", 0.05, 15000)
-    # print(await exchange.getAccountBalance())
 
 
     # await bot.exitMarket("Test")
-    await bot.placeOrderInit()
+    print(await exchange.getAccountBalance())
 
-    await bot.performanceGrapH("USDT")
+    # await bot.placeOrderInit()
+
+    # await bot.performanceGrapH("USDT")
 
 
 async def testing():

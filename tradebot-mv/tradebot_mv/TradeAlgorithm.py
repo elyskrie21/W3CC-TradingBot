@@ -243,13 +243,21 @@ class ElyseAlgo():
             await self.cancelOrders()
 
             while(status != "filled"):
-                myLogger("Waiting for " + sellType + ": " + stopLossOrderID + ", to be completed", self.logFile)
+                myLogger("Waiting for " + str(sellType) + ": " + str(stopLossOrderID) + ", to be completed", self.logFile)
                 order_info = await self.sendRequest.req("get_order",stopLossOrderID, self.symbol)
                 status = order_info["status"].lower()
 
                 time.sleep(5)
             
-            myLogger(sellType + ": " + stopLossOrderID + ", has been completed", self.logFile)
+            myLogger(str(stopLossOrderID) + ": " + str(stopLossOrderID) + ", has been completed", self.logFile)
+
+            # need to check that there isn't any crypto in the account
+            # if there is, we need to sell the remain. 
+            time.sleep(30);
+            stopLossOrderID = await self.sendRequest.req("exit_market")
+
+            if stopLossOrderID <= 0:
+                myLogger(str(stopLossOrderID) + ": Exit Market Fully Commpleted without " + self.symbol + "remaining", self.logFile)
             
         else:
             myLogger(sellType + " was not completed: price re-entered grid", self.logFile)    
@@ -281,7 +289,7 @@ class ElyseAlgo():
         huber.fit(A, y)
         huber.predict(A)
 
-        myLogger("EnterMarket Data: (Coef: " + huber.coef_[0] + "), (STD: " + std + ")", self.logFile)
+        myLogger("EnterMarket Data: (Coef: " + str(huber.coef_[0]) + "), (STD: " + str(std) + ")", self.logFile)
         if (huber.coef_[0] > 0 and std < 1):
             return True
         

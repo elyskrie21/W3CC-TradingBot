@@ -53,6 +53,9 @@ class SendRequest:
                     coinAccountBalance = (await self.exchange.getAccountBalance())["free"][self.symbol.split("/")[0]]
                     ask_price = (await self.fetcher.fetchTickers(self.symbol))["ask"]
 
+                    if coinAccountBalance <= 0:
+                        return -1; 
+
                     orderid = (await self.exchange.sell(self.symbol, "limit", coinAccountBalance, ask_price))["info"]["orderId"]
                     
                     return orderid
